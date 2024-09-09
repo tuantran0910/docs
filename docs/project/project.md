@@ -94,7 +94,7 @@
 - The flow when a request being sent to the endpoint:
 
     ```
-    **Request → Router → Controller → Service → Repository → Model / Entity & Database**
+    **Request** → **Router** → **Controller** → **Service** → **Repository** → **Model** / **Entity** & **Database**
     ```
 
 ## Database
@@ -269,7 +269,7 @@
                 incremental_strategy='merge'
             )
         }}
-        
+
         WITH latest_version AS (
             SELECT
                 id,
@@ -311,7 +311,7 @@
         ),
         new_customers AS (
             SELECT
-                {{ dbt_utils.generate_surrogate_key(['id']) }} AS customer_key,
+                generate_uuid() AS customer_key,
                 cc.id AS customer_id,
                 cc.first_name,
                 cc.last_name,
@@ -320,8 +320,8 @@
                 DATE '2100-01-01' AS valid_to,
                 TRUE AS is_current
             FROM current_customers AS cc
-            LEFT JOIN {{ this }} AS dc ON cc.id = dc.customer_id
-            WHERE dc.customer_id IS NULL OR dc.is_current = FALSE
+            LEFT JOIN {{ this }} AS dc 
+            ON cc.id = dc.customer_id AND is_current = TRUE
         )
         SELECT * FROM existing_customers
         UNION ALL
