@@ -115,16 +115,16 @@
 
     ![image.png](img/image%201.png)
 
-### **Data Source (Master Dataset)**
+### Data Source (Master Dataset)
 
 - This is where the raw data originates which we define it as our **Master Dataset**. This source provides that the transactional data with relevant data in the database will be processed and stored in the data warehouse.
 
-### **Staging Area**
+### Staging Area
 
 - Data from the sources is first loaded into a staging area. The schema in the staging layer is the same as the schema in the Master Dataset.
 - This staging area is used to reduce the operations and load times on the source systems.
 
-### **Data Warehouse Layer**
+### Data Warehouse Layer
 
 - Our target is to perform sales analytics with our transactional data, we categorize the data into star schema in data warehouse.
 
@@ -250,7 +250,7 @@
 
     - In this project, partitioned assets will be run on the latest partition key. In other words, if I have `DailyPartition` asset, each day the pipeline will run on the partition key of the previous date. For example, if the current date is `2024-09-02`, then the pipeline will be provided a partition key of the previous date `2024-09-01` when it starts to run.
 
-### **Dbt**
+### Dbt
 
 - Our project consists of ETL pipeline where we extract data from Rainbow Database, transform and load them to the Data Warehouse. The letters **E** and **L** are the process of moving data between two places in which we can easily achieve this by writing script and defining them as assets in Dagster.
 - The remaining letter **T** represents for the transformation step. To achieve this step, I decide to transform using SQL script and [dbt](https://docs.getdbt.com/docs/introduction) is the most suitable to this situation.
@@ -351,7 +351,7 @@
             ON revenue_fact_sales.total_extended_sales_amount != revenue_raw_order_details.total_extended_sales_amount
         ```
 
-### **Dagster & dbt**
+### Dagster & dbt
 
 - You can think of dbt model as an asset in Dagster. When a dbt model runs, it can create a view or table in our data warehouse which we can call it as a Dagster asset. The dependencies between dbt models are also dependencies of corresponding assets in Dagster.
 
@@ -377,7 +377,7 @@
 
 - Single Kafka cluster is deployed into Kubernetes environment. Each broker lives within one separate Kubernetes pod.
 
-    ![https://scontent.xx.fbcdn.net/v/t1.15752-9/458392748_1290893492291479_3093652921399935731_n.png?_nc_cat=108&ccb=1-7&_nc_sid=0024fc&_nc_eui2=AeEilu8uUAOIUSQ_m4mcSfsM0V20kXa_dInRXbSRdr90idP-I42ieFPudT-7CZ5TbrOhBHWSGHbVFO71-xHoS0vd&_nc_ohc=ylINJx2VPVoQ7kNvgE08tkq&_nc_ad=z-m&_nc_cid=0&_nc_ht=scontent.xx&_nc_gid=AHLfhqvSVvBl_8N2lZc2bP6&oh=03_Q7cD1QEla7XKWiVs6oMgf5IFe1ViPk-G3xCeYibTAP6UB5RHuw&oe=66DE4FAF](https://scontent.xx.fbcdn.net/v/t1.15752-9/458392748_1290893492291479_3093652921399935731_n.png?_nc_cat=108&ccb=1-7&_nc_sid=0024fc&_nc_eui2=AeEilu8uUAOIUSQ_m4mcSfsM0V20kXa_dInRXbSRdr90idP-I42ieFPudT-7CZ5TbrOhBHWSGHbVFO71-xHoS0vd&_nc_ohc=ylINJx2VPVoQ7kNvgE08tkq&_nc_ad=z-m&_nc_cid=0&_nc_ht=scontent.xx&_nc_gid=AHLfhqvSVvBl_8N2lZc2bP6&oh=03_Q7cD1QEla7XKWiVs6oMgf5IFe1ViPk-G3xCeYibTAP6UB5RHuw&oe=66DE4FAF)
+    ![image.png](img/broker.png)
 
 ### Topic
 
