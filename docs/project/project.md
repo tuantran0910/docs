@@ -5,23 +5,9 @@
 - By taking on the task of building a Data Engineering project from scratch, I have the opportunity to get exposure to and hands-on experience with the various languages, frameworks, patterns, and tools that a Data Engineer utilizes throughout the product development lifecycle.
 - I have migrated my project from local development to Google Cloud Platform. This progress took me about approximately 4 weeks to complete. Although there are still some unreasonable points, but I always tried my best and put all my effort in this project to develop, maintain and improve the project.
 
-### Architecture
+## Architecture
 
 ![image.png](img/image.png)
-
-### Services
-
-1. **Rainbow API**
-    - API base url: [https://rainbow.tuantrann.work](https://rainbow.tuantrann.work/)
-2. **Dagster Webserver**
-    - Webserver url: [https://dagster.tuantrann.work](https://dagster.tuantrann.work/)
-3. **Kafka UI**
-    - Kafka UI url: [https://kafka-ui.tuantrann.work](https://kafka-ui.tuantrann.work/)
-4. Superset UI
-    - Superset UI url: [https://visualization.tuantrann.work](https://visualization.tuantrann.work/)
-    - **Note**: This requires login with Tiki Corp Mail. E.g `abc@tiki.vn`.
-
-# Components
 
 ## Rainbow API
 
@@ -269,7 +255,7 @@
                 incremental_strategy='merge'
             )
         }}
-
+        
         WITH latest_version AS (
             SELECT
                 id,
@@ -291,7 +277,7 @@
             WHERE row_num = 1
         ),
         existing_customers AS (
-            SELECT
+            SELECT DISTINCT
                 dc.customer_key,
                 dc.customer_id,
                 dc.first_name,
@@ -310,8 +296,7 @@
             )
         ),
         new_customers AS (
-            SELECT
-                generate_uuid() AS customer_key,
+            SELECT DISTINCT
                 cc.id AS customer_id,
                 cc.first_name,
                 cc.last_name,
@@ -320,12 +305,20 @@
                 DATE '2100-01-01' AS valid_to,
                 TRUE AS is_current
             FROM current_customers AS cc
-            LEFT JOIN {{ this }} AS dc 
-            ON cc.id = dc.customer_id AND is_current = TRUE
+            WHERE EXISTS (
+                SELECT 1
+                FROM existing_customers AS ec
+                WHERE cc.id = ec.customer_id
+            )
         )
-        SELECT * FROM existing_customers
+        SELECT 
+            * 
+        FROM existing_customers
         UNION ALL
-        SELECT * FROM new_customers
+        SELECT 
+            generate_uuid() AS customer_key,
+            * 
+        FROM new_customers
         ```
 
 2. **Test**
