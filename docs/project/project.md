@@ -10,7 +10,7 @@
 
 ## Architecture
 
-- The architecture of the project is designed based on the [**Lambda Architecture**](!#lambda-architecture) pattern. There are multiple components in this architecture as we will discuss later.
+- The architecture of the project is designed based on the **Lambda Architecture** pattern. There are multiple components in this architecture as we will discuss later.
 
     ![image.png](img/architecture.png)
 
