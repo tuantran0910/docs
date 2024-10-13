@@ -249,76 +249,103 @@
 
         ```sql
         {{
-            config(
-                materialized='incremental',
-                unique_key='customer_key',
-                incremental_strategy='merge'
-            )
-        }}
-        
-        WITH latest_version AS (
-            SELECT
-                id,
-                first_name,
-                last_name,
-                email,
-                updated_at,
-                ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_at DESC) AS row_num
-            FROM {{ ref('stg_customers') }}
-        ),
-        current_customers AS (
-            SELECT
-                id,
-                first_name,
-                last_name,
-                email,
-                updated_at
-            FROM latest_version
-            WHERE row_num = 1
-        ),
-        existing_customers AS (
-            SELECT DISTINCT
-                dc.customer_key,
-                dc.customer_id,
-                dc.first_name,
-                dc.last_name,
-                dc.email,
-                dc.valid_from,
-                EXTRACT(DATE FROM cc.updated_at) AS valid_to,
-                FALSE AS is_current
-            FROM {{ this }} AS dc
-            JOIN current_customers AS cc ON dc.customer_id = cc.id
-            WHERE dc.is_current = TRUE
-            AND (
-                dc.first_name != cc.first_name OR
-                dc.last_name != cc.last_name OR
-                dc.email != cc.email
-            )
-        ),
-        new_customers AS (
-            SELECT DISTINCT
-                cc.id AS customer_id,
-                cc.first_name,
-                cc.last_name,
-                cc.email,
-                EXTRACT(DATE FROM cc.updated_at) AS valid_from,
-                DATE '2100-01-01' AS valid_to,
-                TRUE AS is_current
-            FROM current_customers AS cc
-            WHERE EXISTS (
-                SELECT 1
-                FROM existing_customers AS ec
-                WHERE cc.id = ec.customer_id
-            )
-        )
-        SELECT 
-            * 
-        FROM existing_customers
-        UNION ALL
-        SELECT 
-            generate_uuid() AS customer_key,
-            * 
-        FROM new_customers
+             config(
+                 materialized='incremental',
+                 unique_key='product_key',
+                 incremental_strategy='merge'
+             )
+         }}
+         
+         WITH latest_version AS (
+             SELECT
+                 id,
+                 name,
+                 rating_average,
+                 review_count,
+                 sold_count,
+                 category_id,
+                 brand_id,
+                 updated_at,
+                 ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_at DESC) AS row_num
+             FROM {{ ref('stg_products') }}
+         ),
+         current_products AS (
+             SELECT
+                 ls.id,
+                 ls.name,
+                 ls.rating_average,
+                 ls.review_count,
+                 ls.sold_count,
+                 ls.category_id,
+                 ls.brand_id,
+                 dc.name AS category,
+                 db.name AS brand,
+                 ls.updated_at
+             FROM latest_version ls
+             JOIN {{ ref('dim_categories') }} AS dc ON ls.category_id = dc.category_id
+             JOIN {{ ref('dim_brands') }} AS db ON ls.brand_id = db.brand_id
+             WHERE row_num = 1
+         ),
+         existing_products AS (
+             SELECT DISTINCT
+                 dp.product_key,
+                 dp.product_id,
+                 dp.name,
+                 dp.rating_average,
+                 dp.review_count,
+                 dp.sold_count,
+                 dp.category,
+                 dp.brand,
+                 dp.valid_from,
+                 EXTRACT(DATE FROM cp.updated_at) AS valid_to,
+                 FALSE AS is_current
+             FROM {{ this }} AS dp
+             JOIN current_products AS cp ON dp.product_id = cp.id
+             WHERE dp.is_current = TRUE
+             AND (
+                 dp.name != cp.name OR
+                 dp.rating_average != cp.rating_average OR
+                 dp.review_count != cp.review_count OR
+                 dp.sold_count != cp.sold_count OR
+                 dp.category != cp.category OR
+                 dp.brand != cp.brand
+             )
+         ),
+         new_products AS (
+             SELECT DISTINCT
+                 cp.id AS product_id,
+                 cp.name AS name,
+                 cp.rating_average AS rating_average,
+                 cp.review_count AS review_count,
+                 CAST(cp.sold_count AS INT64) AS sold_count,
+                 cp.category AS category,
+                 cp.brand AS brand,
+                 EXTRACT(DATE FROM cp.updated_at) AS valid_from,
+                 DATE '2100-01-01' AS valid_to,
+                 TRUE AS is_current
+             FROM current_products AS cp
+             LEFT JOIN {{ this}} AS dp ON cp.id = dp.product_id
+             WHERE dp.product_id IS NULL
+             OR (
+                 dp.is_current = TRUE AND
+                 (
+                     dp.name != cp.name OR
+                     dp.rating_average != cp.rating_average OR
+                     dp.review_count != cp.review_count OR
+                     dp.sold_count != cp.sold_count OR
+                     dp.category != cp.category OR
+                     dp.brand != cp.brand
+                 )
+             )
+         )
+         SELECT 
+             * 
+         FROM existing_products
+         UNION ALL
+         SELECT 
+             generate_uuid() AS product_key,
+             * 
+         FROM new_products
         ```
 
 2. **Test**
