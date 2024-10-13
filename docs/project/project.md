@@ -1,17 +1,26 @@
 # Rainbow Project
 
-## Summary
+## Introduction
 
-- By taking on the task of building a Data Engineering project from scratch, I have the opportunity to get exposure to and hands-on experience with the various languages, frameworks, patterns, and tools that a Data Engineer utilizes throughout the product development lifecycle.
-- I have migrated my project from local development to Google Cloud Platform. This progress took me about approximately 4 weeks to complete. Although there are still some unreasonable points, but I always tried my best and put all my effort in this project to develop, maintain and improve the project.
+- By building a Data Engineering project from scratch, I have the opportunity to gain hands-on experience with various languages, frameworks, patterns, and tools that a Data Engineer uses throughout the product development lifecycle.
+
+- I successfully migrated my project from local development to Google Cloud Platform, a process that took approximately four weeks. While there are still some areas for improvement, I have consistently put my best effort into developing, maintaining, and enhancing the project.
+
+    > **_NOTE:_**  This project is an internal project that I have been working during my internship at [**_Tiki_**](https://tuyendung.tiki.vn). The team size of the project is 1, which only involves me. The main purpose of this project is to build a knowledge base and gain practical experience in the Data Engineering career path.
 
 ## Architecture
 
-![image.png](img/image.png)
+- The architecture of the project is designed based on the [**Lambda Architecture**](!#lambda-architecture) pattern. There are multiple components in this architecture as we will discuss later.
+
+    ![image.png](img/architecture.png)
 
 ## Rainbow API
 
-- This Rainbow API is mainly built for generating order data in this project and written using Golang.
+- This is our application that reflects the business process of an e-commerce platform. I assume that each time a customer places an order, the order data will be generated and stored in the database. This application is an API written in Golang that provides endpoints for managing orders.
+
+    ![image.png](img/api.png)
+
+- The order data includes the ID of the customer, the payment method used, and the list of products in the order. The API allows users to retrieve a list of all orders, retrieve an order by its ID, and create a new order.
 
 ### Routes
 
@@ -22,6 +31,7 @@
     - **Description**: Health check endpoint.
     - **Response**:
         - **200 OK**: The service is running.
+        - **500 Internal Server Error**: Server Error.
 
     ---
 
@@ -30,6 +40,7 @@
     - **Description**: Information about the service.
     - **Response**:
         - **200 OK**: Service information.
+        - **500 Internal Server Error**: Server Error.
 
     ---
 
@@ -43,6 +54,7 @@
     - **Response**:
         - **200 OK**: Returns the order details.
         - **404 Not Found**: Order not found.
+        - **500 Internal Server Error**: Server Error.
 
     ---
 
@@ -51,6 +63,7 @@
     - **Description**: Retrieve a list of all orders.
     - **Response**:
         - **200 OK**: Returns a list of orders.
+        - **500 Internal Server Error**: Server Error.
 
     ---
 
@@ -70,82 +83,288 @@
 
 ### API Request Flow
 
-- Some definitions when working with API:
-  - **Routes**: Defines the endpoints of your API and maps HTTP requests to corresponding controller actions.
-  - **Controllers**: Controllers handles HTTP requests, extracts necessary data, and calls appropriate service methods.
-  - **Services**: Services contain the business logic of your application. It performs operations, calls the repository for data access, and processes data before returning it to the controller.
-  - **Repositories**: Repositories are responsible for data access. It performs CRUD operations on the database.
-  - **Unit of Work**: Unit of Work is a design pattern that helps to maintain consistency and integrity in the database. It keeps track of all the changes made to the database and commits them as a single transaction.
-  - **Models**: Models are the data structures that represent the data in your application. It contains the schema of the database tables.
-- The flow when a request being sent to the endpoint:
+- Some definitions when I mention about the API request flow:
 
-    ```
-    **Request** → **Router** → **Controller** → **Service** → **Repository** → **Model** / **Entity** & **Database**
-    ```
+  - **Routes**: The endpoints of the API and maps HTTP requests to corresponding controller actions.
+  - **Controllers**: Controllers handles HTTP requests, extracts necessary data, and calls appropriate service methods.
+  - **Services**: Services contain the business logic of your application. It performs operations, calls the repository for data access.
+  - **Repositories**: Repositories are responsible for data access. It performs CRUD operations on the database.
+  - **Models**: Models represent the data in the application.
+  - **Unit of Work**: Unit of Work is keeps track of all the changes made to the database and commits them as a single transaction.
+
+- When the request is being made to the API, it will go through the following steps:
+
+    ![image.png](img/api-flow.png)
 
 ## Database
 
-- PostgreSQL relational database is used as our database in this project. Below is the schema of the database.
+- This project uses a PostgreSQL relational database to store the data. The database schema is designed to store the order data, customer data, product data, and other relevant data.
 
-    ![rainbow-db-2.png](img/rainbow-db-2.png)
+    ![rainbow-db.png](img/rainbow-db-2.png)
 
 ## Data Warehouse
 
-- The amount of data generated is constantly increasing day by day and we need to find new ways of utilizing the vast amounts of that are stored in source systems. Data Warehouse is a central repository that stores organization's data with the goal of supporting business intelligence and data analytics.
-  - **4 Steps Dimensional Design Process ?**
-    - **Step 1:** Select the business process.
-    - **Step 2:** Declare the grain.
-    - **Step 3:** Identity the facts.
-    - **Step 4:** Identity the dimensions.
-- Our target is to perform sales analytics with our transactional data, we construct the data warehouse which centralized the sales data with additional relevant data. I am using Google BigQuery as my data warehouse for this project.
+- The amount of data of the system is constantly increasing day by day, so it is necessary to have a data warehouse to store and analyze the data.
 
-    ![image.png](img/image%201.png)
+    > **_4 Steps Dimensional Design Process ?_**
+    > - **Step 1:** Select the business process.
+    > - **Step 2:** Declare the grain.
+    > - **Step 3:** Identity the facts.
+    > - **Step 4:** Identity the dimensions.
+
+- Our goal is to perform sales analytics using our transactional data. To achieve this, we have built a data warehouse that centralizes the sales data along with other relevant information. For this project, I am using Google BigQuery as the data warehouse solution.
+
+### Pipeline Overview
+
+- We built a data pipeline to extract data from the source, perform transformations, and load it into the data warehouse. Finally, we generate batch views to serve the needs of the Batch layer in the Lambda Architecture.
+
+    ![image.png](img/dw-pipeline.png)
 
 ### Data Source (Master Dataset)
 
-- This is where the raw data originates which we define it as our **Master Dataset**. This source provides that the transactional data with relevant data in the database will be processed and stored in the data warehouse.
+- This is where the raw data originates which we define it as our **Master Dataset**. This dataset is immutable and append-only, meaning that once data is written, it cannot be changed or deleted.
+
+- We can consider this layer as a backup of the data. If something goes wrong in the data warehouse, we can always go back to the master dataset and reprocess the data.
 
 ### Staging Area
 
 - Data from the sources is first loaded into a staging area. The schema in the staging layer is the same as the schema in the Master Dataset.
-- This staging area is used to reduce the operations and load times on the source systems.
+
+- I find some advantages of having a staging area:
+  - This layer allows us to perform data consolidation and data cleaning before loading the data into the data warehouse. E.g: We can do renaming columns, converting data types to make data consistent between different sources.
+  - If there are many pipelines run on different schedules, the staging area can be used to store the data temporarily before loading it into the data warehouse.
 
 ### Data Warehouse Layer
 
 - Our target is to perform sales analytics with our transactional data, we categorize the data into star schema in data warehouse.
 
-    ![Data Warehouse-3.png](img/Data_Warehouse-3.png)
+    > **_NOTE:_**  As our amount of data is not large, I allow the data warehouse to have data redundancy to improve query performance. Therefore, I choose to use the **star schema** instead of the snowflake schema.
 
-- The star schema involves those components:
+    ![image.png](img/Data_Warehouse-3.png)
+
+- The **star schema** involves those components:
+
     1. **Fact table**:
-        - A fact table contains the quantitative data (facts) of a business process or event also foreign keys that reference primary keys in dimension tables.
-        - Granularity: Each row in a fact table is a record of an item sold.
-        - This fact table `fact_sales` captures the quantitative data related to sales transactions. Our quantitative data or facts are sales data contain quantity of products sold (`sales_quantity`), unit and extended total amount (`regular_unit_price`, `net_unit_price`, `extended_sales_amount`), discount amount (`discount_unit_price`, `extended_discount_amount`).
-    2. **Dimension table**:
-        - Dimension tables store descriptive information or attributes related to the business process or event recorded in the fact table.
-        - Dimension tables: `dim_dates`, `dim_customers`, `dim_products`, `dim_sellers`, `dim_promotions`, `dim_payments`.
-        - **Slowly Changing Dimensions (SCDs) in Data Warehouses**
-            - Slowly Changing Dimensions in Data Warehouse is an important concept that is used to enable the historic aspect of data in an analytical system.
-            - In this project, I implement the SCD type 2 where a change occurs in a dimension record results in a new row added to the table to capture the new data, and the old record remains unchanged and also is marked as expired.
-            - For SCD Type 2, I need to include three more attributes `valid_from`, `valid_to` and `is_current` as shown below. The newest version of record will have the column `valid_to`'s value `2100-01-01` and also the column `is_current`'s value `true`.
 
-                ![image.png](img/image%202.png)
+        - Our fact table **`fact_sales`** contains the quantitative data related to sales transactions of our business process. Our quantitative data or facts are sales data contain quantity of products sold (`sales_quantity`), unit and extended total amount (`regular_unit_price`, `net_unit_price`, `extended_sales_amount`), discount amount (`discount_unit_price`, `extended_discount_amount`). The fact table also contains the foreign keys to the dimension tables.
+        - Granularity: Each row in a fact table is a record of an item sold.
+
+    2. **Dimension table**:
+        - Our dimension tables contain the descriptive data related to the our business process. The dimension tables are used to filter, group, or aggregate the data in the fact table.
+        - Dimension tables: `dim_dates`, `dim_customers`, `dim_products`, `dim_sellers`, `dim_promotions`, `dim_payments`.
+
+### Slowly Changing Dimensions (SCDs)
+
+- We use the Slowly Changing Dimensions (SCDs) technique to handle changes in dimension data over time.
+- In this project, I implement the SCD type 2 where a change occurs in a dimension record results in a new row added to the table to capture the new data, and the old record remains unchanged and also is marked as expired.
+- For SCD Type 2, I need to include three more attributes `valid_from`, `valid_to` and `is_current` as shown below. The newest version of record will have the column `valid_to`'s value `2100-01-01` and also the column `is_current`'s value `true`.
+
+    ![image.png](img/image%202.png)
+
+### ETL Logic
+
+- The ETL process is responsible for extracting data from the source, transforming it, and loading it into the data warehouse.
+
+- The first step in the ETL process is data extraction from the source. In this pipeline, all data is first extracted from the Rainbow Database and loaded into the master dataset. Next, the data is transferred to the staging area. To achieve this, I am using dbt to extract data from the Rainbow Database and load it into the staging area.
+
+    > **_NOTE:_**  There are few dbt syntaxes that I use in the project. We will discuss more about dbt in the later section.
+
+    ```sql
+    SELECT
+        id,
+        name,
+        price,
+        original_price,
+        rating_average,
+        review_count,
+        sold_count,
+        category_id,
+        seller_id,
+        brand_id,
+        promotion_id,
+        updated_at
+    FROM {{ source('rainbow', 'products') }}
+    ```
+
+- The next step is loading data into the dimension tables. We do this by transforming the data in the staging area, combining it with existing data in the dimension tables for the SCD Type 2, and loading it into the dimension tables.
+
+    ```sql
+    {{
+        config(
+            materialized='incremental',
+            unique_key='product_key',
+            incremental_strategy='merge'
+        )
+    }}
+
+    WITH latest_version AS (
+        SELECT
+            id,
+            name,
+            rating_average,
+            review_count,
+            sold_count,
+            category_id,
+            brand_id,
+            updated_at,
+            ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_at DESC) AS row_num
+        FROM {{ ref('stg_products') }}
+    ),
+    current_products AS (
+        SELECT
+            ls.id,
+            ls.name,
+            ls.rating_average,
+            ls.review_count,
+            ls.sold_count,
+            ls.category_id,
+            ls.brand_id,
+            dc.name AS category,
+            db.name AS brand,
+            ls.updated_at
+        FROM latest_version ls
+        JOIN {{ ref('dim_categories') }} AS dc ON ls.category_id = dc.category_id
+        JOIN {{ ref('dim_brands') }} AS db ON ls.brand_id = db.brand_id
+        WHERE row_num = 1
+    ),
+    existing_products AS (
+        SELECT DISTINCT
+            dp.product_key,
+            dp.product_id,
+            dp.name,
+            dp.rating_average,
+            dp.review_count,
+            dp.sold_count,
+            dp.category,
+            dp.brand,
+            dp.valid_from,
+            EXTRACT(DATE FROM cp.updated_at) AS valid_to,
+            FALSE AS is_current
+        FROM {{ this }} AS dp
+        JOIN current_products AS cp ON dp.product_id = cp.id
+        WHERE dp.is_current = TRUE
+        AND (
+            dp.name != cp.name OR
+            dp.rating_average != cp.rating_average OR
+            dp.review_count != cp.review_count OR
+            dp.sold_count != cp.sold_count OR
+            dp.category != cp.category OR
+            dp.brand != cp.brand
+        )
+    ),
+    new_products AS (
+        SELECT DISTINCT
+            cp.id AS product_id,
+            cp.name AS name,
+            cp.rating_average AS rating_average,
+            cp.review_count AS review_count,
+            CAST(cp.sold_count AS INT64) AS sold_count,
+            cp.category AS category,
+            cp.brand AS brand,
+            EXTRACT(DATE FROM cp.updated_at) AS valid_from,
+            DATE '2100-01-01' AS valid_to,
+            TRUE AS is_current
+        FROM current_products AS cp
+        LEFT JOIN {{ this}} AS dp ON cp.id = dp.product_id
+        WHERE dp.product_id IS NULL
+        OR (
+            dp.is_current = TRUE AND
+            (
+                dp.name != cp.name OR
+                dp.rating_average != cp.rating_average OR
+                dp.review_count != cp.review_count OR
+                dp.sold_count != cp.sold_count OR
+                dp.category != cp.category OR
+                dp.brand != cp.brand
+            )
+        )
+    )
+    SELECT 
+        * 
+    FROM existing_products
+    UNION ALL
+    SELECT 
+        generate_uuid() AS product_key,
+        * 
+    FROM new_products
+    ```
+
+    > **_NOTE:_**  We will go from the end of the query to the beginning. The query first defines the `new_products` CTE, which selects the new products that are not in the existing products or the new version of the existing products. The `existing_products` CTE selects the existing products that have changed. The `current_products` CTE selects the latest version of the products from the staging area.
+
+- The final step is loading data into the fact table. We do this by transforming the fact data in the staging area, combining it with data from the dimension tables, and loading it into the fact table.
+
+    ```sql
+    {{
+        config(
+            materialized='incremental',
+            unique_key=['date_key', 'product_key', 'seller_key', 'promotion_key', 'customer_key', 'payment_key', 'order_transaction'],
+            incremental_strategy='merge'
+        )
+    }}
+
+    WITH product_seller AS (
+        SELECT
+            id,
+            seller_id
+        FROM {{ ref('stg_products') }}
+        GROUP BY id, seller_id
+    )
+    SELECT
+        dd.date_key,
+        ldp.product_key,
+        lds.seller_key,
+        ldprom.promotion_key,
+        ldc.customer_key,
+        ldpay.payment_key,
+        so.id AS order_transaction,
+        sod.quantity AS sales_quantity,
+        sod.price AS regular_unit_price,
+        CASE
+            WHEN ldprom.coupon_type = 'Percentage' THEN ldprom.price_treatment * sod.price / 100
+            WHEN ldprom.coupon_type = 'Fixed Amount' THEN ldprom.price_treatment * 1000
+            ELSE 0
+        END AS discount_unit_price,
+        CASE
+            WHEN ldprom.coupon_type = 'Percentage' THEN sod.price - (ldprom.price_treatment * sod.price / 100)
+            WHEN ldprom.coupon_type = 'Fixed Amount' THEN sod.price - (ldprom.price_treatment * 1000)
+            ELSE sod.price
+        END AS net_unit_price,
+        CASE
+            WHEN ldprom.coupon_type = 'Percentage' THEN sod.quantity * (ldprom.price_treatment * sod.price / 100)
+            WHEN ldprom.coupon_type = 'Fixed Amount' THEN sod.quantity * (ldprom.price_treatment * 1000)
+            ELSE 0
+        END AS extended_discount_amount,
+        sod.price * sod.quantity AS extended_sales_amount
+    FROM {{ ref('stg_orders') }} AS so
+    JOIN {{ ref('stg_order_details') }} AS sod ON so.id = sod.id
+    JOIN product_seller AS ps ON sod.product_id = ps.id
+    JOIN {{ ref('dim_customers') }} AS ldc ON so.customer_id = ldc.customer_id AND ldc.is_current = TRUE
+    JOIN {{ ref('dim_products') }} AS ldp ON sod.product_id = ldp.product_id AND ldp.is_current = TRUE
+    JOIN {{ ref('dim_sellers') }} AS lds ON ps.seller_id = lds.seller_id AND lds.is_current = TRUE
+    JOIN {{ ref('dim_promotions') }} AS ldprom ON sod.promotion_id = ldprom.promotion_id AND ldprom.is_current = TRUE
+    JOIN {{ ref('dim_payments') }} AS ldpay ON so.payment_id = ldpay.payment_id AND ldpay.is_current = TRUE
+    JOIN {{ ref('dim_dates') }} AS dd ON DATE(so.updated_at) = dd.date
+    ```
+
+    > **_NOTE:_**  The main idea of the query is to join the fact data with the dimension data and selects the necessary columns for the fact table.
 
 ### Access Layer
 
 - With data stored in data warehouse, we can connect to visualization tools or applications for building charts, dashboards.
 
+    ![image.png](img/acess_layer.png)
+
 ## Lambda Architecture
 
 - Lambda Architecture is a data processing architecture that takes advantages of both batch and streaming processing methods.
 
-    ![image.png](img/image%203.png)
+    ![image.png](img/lambda-architecture.png)
 
 ### Batch Layer
 
 - Batch layer is responsible for 2 purposes: **Handling the historical data** and **Generating batch views** of precomputed results.
 
-    ![image.png](img/image%204.png)
+    ![image.png](img/batch_layer.png)
 
 - It manages the master dataset where the data is immutable and append-only, preserving a trusted historical records of all the incoming data from source. I created a dataset `raw` for storing master dataset.
 
@@ -159,7 +378,7 @@
 
 - By design, the batch layer has a high latency, typically delivering batch views to the serving layer at a rate of once or twice per day. Speed layer handles realtime data streams and provides up-to-date views.
 
-    ![image.png](img/image%207.png)
+    ![image.png](img/speed-layer.png)
 
 - In this project, the stream flows are just to deliver data from source (**Rainbow Database**) to our sink (**OLAP Database**) in near realtime without processing. Data after being transmitted to the destination will be aggregated and formed speed views.
 - I am using Kafka Connect to establish data streams from the source to sink by configuring two plugins **`io.debezium.connector.postgresql.PostgresConnector`** and **`com.clickhouse.kafka.connect.ClickHouseSinkConnector`**.
@@ -169,21 +388,21 @@
 - The data serving layer receives the batch views from the batch layer and also receives the near real-time views streaming in from the speed layer.
 - Serving layer merges results from those two layer into final unified views.
 
-    ![image.png](img/image%208.png)
+    ![image.png](img/serving-layer.png)
 
 ## Data Pipeline
 
 - Our data pipeline mainly focus on moving, transforming and organizing data to serve the need of Batch layer in the lambda architecture.
 - For orchestrating, scheduling the pipeline in an automatically way, I am using open source tool called [**Dagster**](https://dagster.io/). Moreover, [**dbt**](https://www.getdbt.com/) is used for transformation steps in our data pipeline.
 
-    ![image.png](img/image%209.png)
+    ![image.png](img/data-pipeline.png)
 
 ### Dagster
 
 - Dagster models pipelines in terms of the data assets. With Dagster, you declare functions in Python that you want to run and the data assets that those functions produce or update.
 
 1. **Assets**
-    - Dagster is asset-centric, which declare that the primary focus is on the ***data products* (assets)** generated by the pipeline. An **asset** is an object in persistent storage, such as a table, file. In this project, I defined many assets, each asset is responsible for a result of one step.
+    - Dagster is asset-centric, which declare that the primary focus is on the **_data products_ (assets)** generated by the pipeline. An **asset** is an object in persistent storage, such as a table, file. In this project, I defined many assets, each asset is responsible for a result of one step.
 
         ![image.png](img/image%2010.png)
 
@@ -245,107 +464,20 @@
 1. **Model**
     - Dbt model is essentially a SQL file that contains a transformation query. This query decides how data is transformed from its raw form to a usable form in the data warehouse.
     - The SQL query is saved as a view or table in the data warehouse. This means that we don’t need to care about scripts to create a view or a table and instead focus on the transformation logic only.
-    - For example, I have a dbt model `dim_products` which represents the transformation logic of creating a dimension table for product data. Every time this dbt model runs, the new data is inserted incrementally to the table `dim_products` in our data warehouse by specifying `materialized='incremental'`.
+    - For example, I have a dbt model `dim_products` which represents the transformation logic of creating a dimension table for product data. Every time this dbt model runs, the new data is inserted incrementally to the table `dim_products` in our data warehouse by specifying `materialized='incremental'`. For SCD type 2, I use `incremental_strategy='merge'` to handle the changes in the data.
 
         ```sql
         {{
-             config(
-                 materialized='incremental',
-                 unique_key='product_key',
-                 incremental_strategy='merge'
-             )
-         }}
-         
-         WITH latest_version AS (
-             SELECT
-                 id,
-                 name,
-                 rating_average,
-                 review_count,
-                 sold_count,
-                 category_id,
-                 brand_id,
-                 updated_at,
-                 ROW_NUMBER() OVER (PARTITION BY id ORDER BY updated_at DESC) AS row_num
-             FROM {{ ref('stg_products') }}
-         ),
-         current_products AS (
-             SELECT
-                 ls.id,
-                 ls.name,
-                 ls.rating_average,
-                 ls.review_count,
-                 ls.sold_count,
-                 ls.category_id,
-                 ls.brand_id,
-                 dc.name AS category,
-                 db.name AS brand,
-                 ls.updated_at
-             FROM latest_version ls
-             JOIN {{ ref('dim_categories') }} AS dc ON ls.category_id = dc.category_id
-             JOIN {{ ref('dim_brands') }} AS db ON ls.brand_id = db.brand_id
-             WHERE row_num = 1
-         ),
-         existing_products AS (
-             SELECT DISTINCT
-                 dp.product_key,
-                 dp.product_id,
-                 dp.name,
-                 dp.rating_average,
-                 dp.review_count,
-                 dp.sold_count,
-                 dp.category,
-                 dp.brand,
-                 dp.valid_from,
-                 EXTRACT(DATE FROM cp.updated_at) AS valid_to,
-                 FALSE AS is_current
-             FROM {{ this }} AS dp
-             JOIN current_products AS cp ON dp.product_id = cp.id
-             WHERE dp.is_current = TRUE
-             AND (
-                 dp.name != cp.name OR
-                 dp.rating_average != cp.rating_average OR
-                 dp.review_count != cp.review_count OR
-                 dp.sold_count != cp.sold_count OR
-                 dp.category != cp.category OR
-                 dp.brand != cp.brand
-             )
-         ),
-         new_products AS (
-             SELECT DISTINCT
-                 cp.id AS product_id,
-                 cp.name AS name,
-                 cp.rating_average AS rating_average,
-                 cp.review_count AS review_count,
-                 CAST(cp.sold_count AS INT64) AS sold_count,
-                 cp.category AS category,
-                 cp.brand AS brand,
-                 EXTRACT(DATE FROM cp.updated_at) AS valid_from,
-                 DATE '2100-01-01' AS valid_to,
-                 TRUE AS is_current
-             FROM current_products AS cp
-             LEFT JOIN {{ this}} AS dp ON cp.id = dp.product_id
-             WHERE dp.product_id IS NULL
-             OR (
-                 dp.is_current = TRUE AND
-                 (
-                     dp.name != cp.name OR
-                     dp.rating_average != cp.rating_average OR
-                     dp.review_count != cp.review_count OR
-                     dp.sold_count != cp.sold_count OR
-                     dp.category != cp.category OR
-                     dp.brand != cp.brand
-                 )
-             )
-         )
-         SELECT 
-             * 
-         FROM existing_products
-         UNION ALL
-         SELECT 
-             generate_uuid() AS product_key,
-             * 
-         FROM new_products
+            config(
+                materialized='incremental',
+                unique_key='product_key',
+                incremental_strategy='merge'
+            )
+        }}
+        
+        -- Logic transformation
+        SELECT 
+            ...
         ```
 
 2. **Test**
