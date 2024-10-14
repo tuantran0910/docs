@@ -461,7 +461,7 @@
 
 ### Dbt
 
-- Our project consists of ETL pipeline where we extract data from Rainbow Database, transform and load them to the Data Warehouse. The letters **E** and **L** are the process of moving data between two places in which we can easily achieve this by writing script and defining them as assets in Dagster.
+- Our project consists of ELT pipeline where we extract data from Rainbow Database, transform and load them to the Data Warehouse. The letters **E** and **L** are the process of moving data between two places in which we can easily achieve this by writing script and defining them as assets in Dagster.
 - The remaining letter **T** represents for the transformation step. To achieve this step, I decide to transform using SQL script and [dbt](https://docs.getdbt.com/docs/introduction) is the most suitable to this situation.
 - Dbt is **a data transformation tool** that enables data analysts and engineers to transform data in a cloud analytics warehouse.
 
