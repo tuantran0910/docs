@@ -284,12 +284,31 @@
         )
     )
     SELECT 
-        * 
+        product_key,
+        product_id,
+        name,
+        rating_average,
+        review_count,
+        sold_count,
+        category,
+        brand,
+        valid_from,
+        valid_to,
+        is_current
     FROM existing_products
     UNION ALL
     SELECT 
         generate_uuid() AS product_key,
-        * 
+        product_id,
+        name,
+        rating_average,
+        review_count,
+        sold_count,
+        category,
+        brand,
+        valid_from,
+        valid_to,
+        is_current
     FROM new_products
     ```
 
@@ -378,6 +397,20 @@
 
     ![image.png](img/image%206.png)
 
+- I use this script to create a batch view for the total sales.
+
+    ```sql
+    SELECT
+        SUM(fs.sales_quantity) AS total_sales_quantity,
+        SUM(fs.extended_sales_amount) AS total_sales_amount,
+        SUM(fs.extended_sales_amount - fs.extended_discount_amount) AS total_profit,
+        MAX(dd.date) AS current_run_date
+    FROM {{ ref('fact_sales') }} AS fs
+    JOIN {{ ref('dim_dates') }} AS dd ON fs.date_key = dd.date_key
+    ```
+
+    > **_NOTE:_**  I use dbt to generate the batch views. The result of the dbt models is stored in the data warehouse and exported to Google Cloud Storage as flat files.
+
 ### Speed Layer
 
 - By design, the batch layer has a high latency, typically delivering batch views to the serving layer at a rate of once or twice per day. Speed layer handles realtime data streams and provides up-to-date views.
@@ -385,7 +418,8 @@
     ![image.png](img/speed-layer.png)
 
 - In this project, the stream flows are just to deliver data from source (**Rainbow Database**) to our sink (**OLAP Database**) in near realtime without processing. Data after being transmitted to the destination will be aggregated and formed speed views.
-- I am using Kafka Connect to establish data streams from the source to sink by configuring two plugins **`io.debezium.connector.postgresql.PostgresConnector`** and **`com.clickhouse.kafka.connect.ClickHouseSinkConnector`**.
+
+    > **_NOTE:_**  I am using Kafka Connect to establish data streams from the source to sink by configuring two plugins **`io.debezium.connector.postgresql.PostgresConnector`** and **`com.clickhouse.kafka.connect.ClickHouseSinkConnector`**.
 
 ### Serving Layer
 
@@ -393,6 +427,32 @@
 - Serving layer merges results from those two layer into final unified views.
 
     ![image.png](img/serving-layer.png)
+
+- I use this script to create a unified view for the total sales.
+
+    ```sql
+    CREATE VIEW IF NOT EXISTS rainbow.v_total_sales ON CLUSTER 'cluster'
+    AS
+    SELECT
+        SUM(total_sales_quantity) AS total_sales_quantity,
+        SUM(total_sales_amount) AS total_sales_amount,
+        SUM(total_profit) AS total_profit
+    FROM (
+        SELECT
+            total_sales_quantity,
+            total_sales_amount,
+            total_profit
+        FROM rainbow.v_total_sales_batch
+        UNION ALL
+        SELECT
+            total_sales_quantity,
+            total_sales_amount,
+            total_profit
+        FROM rainbow.v_total_sales_speed
+    );
+    ```
+
+    > **_NOTE:_**  The unified views are created in Clickhouse. The `rainbow.v_total_sales_batch` view is the batch view (read from flat files in Google Cloud Storage) and the `rainbow.v_total_sales_speed` view is the speed view (read from Clickhouse after ingesting from Kafka). The final view `rainbow.v_total_sales` is the unified view that combines the results from the batch and speed views.
 
 ## Data Pipeline
 
