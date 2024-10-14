@@ -116,7 +116,7 @@
 
 ### Pipeline Overview
 
-- We built a data pipeline to extract data from the source, perform transformations, and load it into the data warehouse. Finally, we generate batch views to serve the needs of the Batch layer in the Lambda Architecture.
+- We built a data pipeline to extract data from the source, load it into the data warehouse and perform necessary transformations. Finally, we generate batch views to serve the needs of the Batch layer in the Lambda Architecture.
 
     ![image.png](img/dw-pipeline.png)
 
