@@ -6,8 +6,6 @@
 
 - I successfully migrated my project from local development to Google Cloud Platform, a process that took approximately four weeks. While there are still some areas for improvement, I have consistently put my best effort into developing, maintaining, and enhancing the project.
 
-    > **_NOTE:_**  This project is an internal project that I have been working during my internship at [**_Tiki_**](https://tuyendung.tiki.vn). The team size of the project is 1, which only involves me. The main purpose of this project is to build a knowledge base and gain practical experience in the Data Engineering career path.
-
 ## Project Architecture
 
 - The architecture of the project is designed based on the **Lambda Architecture** pattern. There are multiple components in this architecture as we will discuss later.
@@ -94,13 +92,13 @@
 
 - When the request is being made to the API, it will go through the following steps:
 
-    ![image.png](img/api-flow.png)
+    ![image.png](img/api_flow.png)
 
 ## Database
 
 - This project uses a PostgreSQL relational database to store the data. The database schema is designed to store the order data, customer data, product data, and other relevant data.
 
-    ![rainbow-db.png](img/rainbow-db-2.png)
+    ![rainbow-db.png](img/rainbow_db.png)
 
 ## Data Warehouse
 
@@ -118,7 +116,7 @@
 
 - We built a data pipeline to extract data from the source, load it into the data warehouse and perform necessary transformations. Finally, we generate batch views to serve the needs of the Batch layer in the Lambda Architecture.
 
-    ![image.png](img/dw-pipeline.png)
+    ![image.png](img/dw_pipeline.png)
 
 ### Data Source (Master Dataset)
 
@@ -140,7 +138,7 @@
 
     > **_NOTE:_**  As our amount of data is not large, I allow the data warehouse to have data redundancy to improve query performance. Therefore, I choose to use the **star schema** instead of the snowflake schema.
 
-    ![image.png](img/Data_Warehouse-3.png)
+    ![image.png](img/dw.png)
 
 - The **star schema** involves those components:
 
@@ -159,7 +157,7 @@
 - In this project, I implement the SCD type 2 where a change occurs in a dimension record results in a new row added to the table to capture the new data, and the old record remains unchanged and also is marked as expired.
 - For SCD Type 2, I need to include three more attributes `valid_from`, `valid_to` and `is_current` as shown below. The newest version of record will have the column `valid_to`'s value `2100-01-01` and also the column `is_current`'s value `true`.
 
-    ![image.png](img/image%202.png)
+    ![image.png](img/scd.png)
 
 ### ELT Logic
 
@@ -375,13 +373,13 @@
 
 - With data stored in data warehouse, we can connect to visualization tools or applications for building charts, dashboards.
 
-    ![image.png](img/acess_layer.png)
+    ![image.png](img/access_layer.png)
 
 ## Lambda Architecture
 
 - Lambda Architecture is a data processing architecture that takes advantages of both batch and streaming processing methods.
 
-    ![image.png](img/lambda-architecture.png)
+    ![image.png](img/lambda_architecture.png)
 
 ### Batch Layer
 
@@ -391,11 +389,11 @@
 
 - It manages the master dataset where the data is immutable and append-only, preserving a trusted historical records of all the incoming data from source. I created a dataset `raw` for storing master dataset.
 
-    ![image.png](img/image%205.png)
+    ![image.png](img/master_dataset.png)
 
 - Batch views are precomputed using BigQuery with SQL scripts. They are stored in a dataset `warehouse` and exported into flat files where OLAP Database (Clickhouse) can ingest from this.
 
-    ![image.png](img/image%206.png)
+    ![image.png](img/batch_views.png)
 
 - I use this script to create a batch view for the total sales.
 
@@ -415,7 +413,7 @@
 
 - By design, the batch layer has a high latency, typically delivering batch views to the serving layer at a rate of once or twice per day. Speed layer handles realtime data streams and provides up-to-date views.
 
-    ![image.png](img/speed-layer.png)
+    ![image.png](img/speed_layer.png)
 
 - In this project, the stream flows are just to deliver data from source (**Rainbow Database**) to our sink (**OLAP Database**) in near realtime without processing. Data after being transmitted to the destination will be aggregated and formed speed views.
 
@@ -426,7 +424,7 @@
 - The data serving layer receives the batch views from the batch layer and also receives the near real-time views streaming in from the speed layer.
 - Serving layer merges results from those two layer into final unified views.
 
-    ![image.png](img/serving-layer.png)
+    ![image.png](img/serving_layer.png)
 
 - I use this script to create a unified view for the total sales.
 
@@ -459,7 +457,7 @@
 - Our data pipeline mainly focus on moving, transforming and organizing data to serve the need of Batch layer in the lambda architecture.
 - For orchestrating, scheduling the pipeline in an automatically way, I am using open source tool called [**Dagster**](https://dagster.io/). Moreover, [**dbt**](https://www.getdbt.com/) is used for transformation steps in our data pipeline.
 
-    ![image.png](img/data-pipeline.png)
+    ![image.png](img/data_pipeline.png)
 
 ### Dagster
 
@@ -468,26 +466,26 @@
 1. **Assets**
     - Dagster is asset-centric, which declare that the primary focus is on the **_data products_ (assets)** generated by the pipeline. An **asset** is an object in persistent storage, such as a table, file. In this project, I defined many assets, each asset is responsible for a result of one step.
 
-        ![image.png](img/image%2010.png)
+        ![image.png](img/dagster_asset.png)
 
     - For example, the asset **`gcs_orders_file`** is responsible for extracting data of table `orders` from Rainbow Database and saving as a parquet file in Google Cloud Storage. Or the asset **`fact_sales`** is the fact table in our data warehouse, it is created by aggregating and transforming data from staging and dimension tables.
 
-        ![image.png](img/image%2011.png)
+        ![image.png](img/dagster_assets.png)
 
     - Dagster automatically tracks asset dependencies and it allows you to track the current state of your assets. Assume if upstream assets are materialized but the downstream assets, it will mark the state of downstream assets as `Out of sync`.
     - Dagster provides **[Asset Checks](https://docs.dagster.io/concepts/assets/asset-checks#asset-checks)** to define and execute different types of checks on your [data assets](https://docs.dagster.io/concepts/assets/software-defined-assets) directly in Dagster. This help us to perform some kind of data quality tests or data existing checks.
 
-        ![image.png](img/image%2012.png)
+        ![image.png](img/dagster_check.png)
 
     - Dagster also allow us to provide rich metadata for each assets.
 
-        ![image.png](img/image%2013.png)
+        ![image.png](img/dagster_metadata.png)
 
 2. **Partitions & Backfill**
     - An asset definition can represent a collection of **partitions** that can be tracked and materialized independently. In other words, you can think each partition functions like its own mini-asset, but they all share a common materialization function and dependencies.
     - For example, I have a `DailyPartition` asset where each partition key represent a date like `2024-09-01`, `2024-02-09`, …
 
-        ![image.png](img/image%2010.png)
+        ![image.png](img/dagster_asset.png)
 
     - Using partitions provides the following benefits:
         - **Cost efficiency**: Run only the data that’s needed on specific partitions.
@@ -497,25 +495,25 @@
         - Scenario when you changed the logic for an asset and need to update historical data with the new logic.
     - In the project, this backfill job will materialize on all **`37`** partitions.
 
-        ![image.png](img/image%2014.png)
+        ![image.png](img/dagster_backfill_job.png)
 
 3. **Resources**
     - In data engineering, resources are the external services, tools, and storage you use to do your job.
     - In this project, the pipeline often interacts with Rainbow Database, Google Cloud Storage, BigQuery. A `gcs` resource is described as below.
 
-        ![image.png](img/image%2015.png)
+        ![image.png](img/dagster_resource.png)
 
     - The concept of **resource** is similar to the concept of **connection** in Airflow. I observe that the two biggest advantages of the resource in Dagster are the reusability in code and resource dependency in asset.
 4. **Assets Job**
     - [Jobs](https://docs.dagster.io/concepts/ops-jobs-graphs/jobs) are the main unit for executing and monitoring asset definitions in Dagster. An asset job is a type of job that targets a selection of assets and can be launched.
     - In this project, I define an asset job called `batch_job` with the purpose of running the whole pipeline in batch layer. This job is launched at fixed interval, by using **schedules**.
 
-        ![image.png](img/image%2016.png)
+        ![image.png](img/dagster_asset_job.png)
 
 5. **Schedules**
     - Schedules are Dagster's way of supporting traditional methods of [automation](https://docs.dagster.io/concepts/automation), which allow you to specify when a [job](https://docs.dagster.io/concepts/ops-jobs-graphs/jobs) should run. Using schedules in this project, the whole pipeline is set up to run at a fixed time at **0:00 AM UTC** every day.
 
-        ![image.png](img/image%2017.png)
+        ![image.png](img/dagster_schedule.png)
 
     - In this project, partitioned assets will be run on the latest partition key. In other words, if I have `DailyPartition` asset, each day the pipeline will run on the partition key of the previous date. For example, if the current date is `2024-09-02`, then the pipeline will be provided a partition key of the previous date `2024-09-01` when it starts to run.
 
@@ -571,11 +569,11 @@
 
 - You can think of dbt model as an asset in Dagster. When a dbt model runs, it can create a view or table in our data warehouse which we can call it as a Dagster asset. The dependencies between dbt models are also dependencies of corresponding assets in Dagster.
 
-    ![image.png](img/image%2018.png)
+    ![image.png](img/dagster_dbt.png)
 
 - Dagster can orchestrates, schedules the run of those dbt models. Dagster makes use of dbt tests as asset checks, therefore, it ensure the data quality when integrating them together.
 
-    ![image.png](img/image%2019.png)
+    ![image.png](img/dagster_dbt_check.png)
 
 ## Kafka
 
@@ -583,7 +581,7 @@
 
 - In this project, I create a single Apache Kafka cluster with `3` brokers. Each topic within this cluster have `3` partitions and `2` replicas. The amount of data is not large, so that this setup is appropriate for serving the need of near realtime streaming.
 
-    ![image.png](img/kafka-cluster.png)
+    ![image.png](img/kafka_cluster.png)
 
   - **Message** is the Kafka’s unit of data like a row or a record of data. **Producer** publish messages into Kafka cluster. **Consumer** then consume those messages by pulling them from the system.
   - The published messages are stored in a server called **broker**. The broker receives messages from producers, assigns offsets, and writes them on disk. It also serves consumers by responding to the message fetch requests.
@@ -593,18 +591,18 @@
 
 - Single Kafka cluster is deployed into Kubernetes environment. Each broker lives within one separate Kubernetes pod.
 
-    ![image.png](img/kafka-broker.png)
+    ![image.png](img/kafka_broker.png)
 
 ### Topic
 
 - Messages are organized into topics. For each table in Rainbow Database, it has a corresponding topic. E.g: Kafka will create a topic `products` for capturing data changes from table `products`.
 
-![image.png](img/image%2021.png)
+    ![image.png](img/kafka_topic.png)
 
 - **Debezium** acts as the Kafka producer which it capture changes (inserts, updates, deletes) from our Rainbow Database. After capturing these changes, Debezium publishes them as events to Kafka topics.
 - The **Clickhouse Sink Connector** serves as the Kafka consumer which it subscribes to the relevant topics and then writes the consumed data into the appropriate tables in ClickHouse.
 
-    ![image.png](img/image%2022.png)
+    ![image.png](img/clickhouse_consume_topic.png)
 
 ## OLAP
 
@@ -612,7 +610,7 @@
 - Clickhouse is used as an OLAP Database in the Serving layer. ClickHouse uses a columnar database model, so it fits the requirements of delivering near real-time data and views due to fast query execution.
 - Clickhouse get precomputed batch views by ingesting from GCS and receives real-time data by ingesting from Kafka.
 
-    ![image.png](img/OLAP.png)
+    ![image.png](img/olap.png)
 
 ## Visualization
 
@@ -622,13 +620,13 @@
 
 - Analyze the total quantity of products sold and the total amount of revenue generated.
 
-    ![0235ABC7-F7A4-4774-B3B1-ED0F13545C5C.png](img/0235ABC7-F7A4-4774-B3B1-ED0F13545C5C.png)
+    ![0235ABC7-F7A4-4774-B3B1-ED0F13545C5C.png](img/total_sales.png)
 
 ### Day Of Week With Most Sales
 
 - Determine which day of the week experiences the highest sales volume. It helps in identifying peak sales days, useful for inventory management and marketing campaigns.
 
-    ![DF2B6332-62FC-421B-B970-4007E093CDE2.png](img/DF2B6332-62FC-421B-B970-4007E093CDE2.png)
+    ![DF2B6332-62FC-421B-B970-4007E093CDE2.png](img/day_of_week_most_sales.png)
 
 ### Top Sellers
 
