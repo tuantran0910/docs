@@ -1,4 +1,11 @@
-# Rainbow Project
+---
+title: "Rainbow Mini Data Platform"
+description: "A Data Engineer Project For Building Knowledge Base"
+authors: [tuantran0910]
+hide_table_of_contents: false
+date: 2024-10-18
+sidebar-position: 1
+---
 
 ## Introduction
 
