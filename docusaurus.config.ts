@@ -1,6 +1,8 @@
 import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import { faGithub, faLinkedin, faTelegram } from '@fortawesome/free-brands-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 const config: Config = {
   title: 'Tran Ngoc Tuan Portfolio',
@@ -62,7 +64,7 @@ const config: Config = {
           },
         ],
       }
-    ]
+    ],
   ],
 
   themeConfig: {
@@ -92,10 +94,25 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://t.me/tntuan0910',
+          type: 'dropdown',
           label: 'Contact',
           position: 'right',
-        }
+          items: [
+            {
+              href: 'https://t.me/tntuan0910',
+              label: 'Telegram',
+            },
+            {
+              href: 'https://www.linkedin.com/in/tntuan0910/',
+              label: 'LinkedIn',
+            },
+          ],
+        },
+        {
+          to: '/resume',
+          label: 'Resume',
+          position: 'left',
+        },
       ],
     },
     prism: {
