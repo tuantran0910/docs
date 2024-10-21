@@ -4,10 +4,12 @@ description: "A Data Engineer Project For Building Knowledge Base"
 authors: [tuantran0910]
 hide_table_of_contents: false
 date: 2024-10-18
-slug: rainbow
+slug: rainbow-mini-data-platform
 ---
 
 import ZoomableImage from '../../src/components/ZoomableImage'
+
+> TL;DR
 
 ## Introduction
 
@@ -15,11 +17,11 @@ import ZoomableImage from '../../src/components/ZoomableImage'
 
 - I successfully migrated my project from local development to Google Cloud Platform, a process that took approximately four weeks. While there are still some areas for improvement, I have consistently put my best effort into developing, maintaining, and enhancing the project.
 
-:::info
+    :::info
 
-All the code, scripts, and configurations for this project is not available publicly as I put it in the Tiki Corporation's private repository.
+    All the code, scripts, and configurations for this project is not available publicly as I put it in the Tiki Corporation's private repository.
 
-:::
+    :::
 
 ## Project Architecture
 
@@ -579,8 +581,7 @@ All the code, scripts, and configurations for this project is not available publ
 ### Dbt
 
 - Our project consists of ELT pipeline where we extract data from Rainbow Database, transform and load them to the Data Warehouse. The letters **E** and **L** are the process of moving data between two places in which we can easily achieve this by writing script and defining them as assets in Dagster.
-- The remaining letter **T** represents for the transformation step. To achieve this step, I decide to transform using SQL script and [dbt](https://docs.getdbt.com/docs/introduction) is the most suitable to this situation.
-- Dbt is **a data transformation tool** that enables data analysts and engineers to transform data in a cloud analytics warehouse.
+- Dbt is designed to solve for the **T** part of ELT, by working on raw data already present in a data warehouse and transforming it into a usable data (tables or views).
 
 1. **Model**
     - Dbt model is essentially a SQL file that contains a transformation query. This query decides how data is transformed from its raw form to a usable form in the data warehouse.
@@ -601,28 +602,71 @@ All the code, scripts, and configurations for this project is not available publ
             ...
         ```
 
-2. **Test**
-    - Data tests are assertions you make about your models and other resources in your dbt project. This improve the integrity of the SQL in each model by making assertions about the results generated.
-    - Data tests are SQL queries. In particular, they are `select` statements that seek to grab "failing" records, ones that disprove your assertion.
-    - For example, I have a dbt test `assert_consistent_total_sales.sql` in which I want to ensure that the total sales value after transforming and loading to data warehouse is consistent to the total sales value in the raw form. This test will fail in case this query returns the count differ than 0.
+2. **Source**
 
-        ```sql
-        WITH revenue_fact_sales AS (
-            SELECT
-                SUM(extended_sales_amount) AS total_extended_sales_amount
-            FROM {{ ref('fact_sales') }}
-        ),
-        revenue_raw_order_details AS (
-            SELECT
-                SUM(quantity * price) AS total_extended_sales_amount
-            FROM {{ source('rainbow', 'orderdetails') }}
-        )
-        SELECT
-            COUNT(*)
-        FROM revenue_fact_sales
-        JOIN revenue_raw_order_details
-            ON revenue_fact_sales.total_extended_sales_amount != revenue_raw_order_details.total_extended_sales_amount
+    - Source tables refer to tables loaded into the warehouse by an EL process. Since dbt did not create them, we need to define them in the `sources.yml` file.
+
+        ```yaml
+        version: 2
+        sources:
+        - name: rainbow
+            schema: raw
+            tables:
+            - name: customers
+            - name: products
+            # Other tables
         ```
+
+        :::note
+
+        In dbt, `{{ source('rainbow', 'products') }}` refers to the table `raw.products` in our data warehouse.
+
+        :::
+
+3. **Test**
+    - We can define tests to be run on processed data using dbt. Dbt allows us to create 2 types of tests, they are:
+
+        1. **Generic tests**: Unique, not_null, accepted_values, and relationships tests per column defined in YAML files.
+            - For example, I have defined some generic tests in the `schema.yml` file. These tests will be run on the columns of the table `dim_products` to ensure the uniqueness and not null constraints.
+
+                ```yaml
+                version: 2
+
+                models:
+                    - name: dim_products
+                    columns:
+                    - name: product_key
+                        description: "Unique surrogate key for a product"
+                        data_tests:
+                        - unique
+                        - not_null
+                    - name: product_id
+                        description: "Unique identifier for a product"
+                        data_tests:
+                        - unique
+                        - not_null
+                ```
+
+        2. **Data tests**: SQL queries that check the data quality of the transformed data. In particular, they are `select` statements that seek to grab "failing" records, ones that disprove your assertion.
+            - For example, I have a dbt test `assert_consistent_total_sales.sql` in which I want to ensure that the total sales value after transforming and loading to data warehouse is consistent to the total sales value in the raw form. This test will fail in case this query returns the count differ than 0.
+
+                ```sql
+                WITH revenue_fact_sales AS (
+                    SELECT
+                        SUM(extended_sales_amount) AS total_extended_sales_amount
+                    FROM {{ ref('fact_sales') }}
+                ),
+                revenue_raw_order_details AS (
+                    SELECT
+                        SUM(quantity * price) AS total_extended_sales_amount
+                    FROM {{ source('rainbow', 'orderdetails') }}
+                )
+                SELECT
+                    COUNT(*)
+                FROM revenue_fact_sales
+                JOIN revenue_raw_order_details
+                    ON revenue_fact_sales.total_extended_sales_amount != revenue_raw_order_details.total_extended_sales_amount
+                ```
 
 ### Dagster & dbt
 
@@ -702,3 +746,13 @@ All the code, scripts, and configurations for this project is not available publ
 ### Customer Ranking
 
 - Rank customers based on metrics such as total purchases
+
+## Conclusion
+
+- In this project, I have shown you:
+    
+    - The architecture of the project based on the Lambda Architecture pattern.
+    - How I do the data processing with the ELT pipeline (batch processing) and the near real-time processing with the Speed Layer.
+    - The data pipeline is orchestrated and scheduled by Dagster.
+    - The transformation step is done by dbt.
+    - Visualization and dashboards are built with Apache Superset.
