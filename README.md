@@ -16,30 +16,30 @@ If you are interested in my custom theme, you can clone this repository and inst
 
 ### Installation
 
-    ```bash
-    git clone https://github.com/tuantran0910/docs.git
+```bash
+git clone https://github.com/tuantran0910/docs.git
 
-    cd docs
+cd docs
 
-    npm install
-    ```
+npm install
+```
 
 ## Usage
 
 ### Local Development
 
-    ```bash
-    # Using npm
-    npm run start
-    ```
+```bash
+# Using npm
+npm run start
+```
 
 This command starts a local development server and opens up a browser window. The default port is 3000.
 
 ### Build
 
-    ```bash
-    npm run build
-    ```
+```bash
+npm run build
+```
 
 This command generates static content into the `build` directory and can be served using any static contents hosting service.
 
