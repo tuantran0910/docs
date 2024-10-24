@@ -35,7 +35,7 @@ export default function Resume() {
             <FontAwesomeIcon icon={faBriefcase} /> Working Experiences
           </h2>
 
-          {/* <div className={styles.experienceItem}>
+          <div className={styles.experienceItem}>
             <h3>Analytics Engineer Intern - Cake</h3>
             <p>
               <strong>Location:</strong> Ho Chi Minh City |{" "}
@@ -44,7 +44,7 @@ export default function Resume() {
             <ul>
               <li>Upcoming ...</li>
             </ul>
-          </div> */}
+          </div>
 
           <div className={styles.experienceItem}>
             <h3>Data Engineer Intern - Tiki</h3>
@@ -63,7 +63,7 @@ export default function Resume() {
               </li>
               <li>
                 Project:{" "}
-                <a href="/docs/projects/rainbow/">Rainbow Mini Data Platform</a>
+                <a href="/docs/projects/rainbow-mini-data-platform/">Rainbow Mini Data Platform</a>
               </li>
             </ul>
           </div>
