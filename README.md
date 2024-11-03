@@ -1,6 +1,6 @@
 # Website
 
-My personal portfolio website. You can view it [here](https://www.tuantrann.work/).
+My name is Tran Ngoc Tuan, this is my personal portfolio website. You can view it [here](https://www.tuantrann.work/).
 
 This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
 
